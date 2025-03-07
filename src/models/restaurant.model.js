@@ -1,6 +1,6 @@
 const UsersRepository = require("./repository");
 
-class RestaurantRepository extends UsersRepository
+class RestaurantRepository extends BaseRepository
 {
     async create (attrs)
     {

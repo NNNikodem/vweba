@@ -1,0 +1,26 @@
+[
+  {
+    "name": "Pod branou",
+    "description": "Najlepsie jedlo v meste",
+    "address": {
+      "street": "Javorovova",
+      "number": 1,
+      "city": "Zilina",
+      "state": "Slovakia"
+    },
+    "type": "Slovenská",
+    "id": "e70a03fa"
+  },
+  {
+    "name": "Asia bisttrenko",
+    "description": "Orienal food without limits",
+    "address": {
+      "street": "La Jous de sen",
+      "number": 10,
+      "city": "Paris",
+      "state": "France"
+    },
+    "type": "Chinnese",
+    "id": "f9e78c3a"
+  }
+]

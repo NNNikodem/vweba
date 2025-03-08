@@ -5,7 +5,7 @@ const { checkValidation } = require("../utils/helpers");
 
 const get = async (req, res) => {
   const records = await restaurants.getAll();
-
+  console.log(req.user);
   res.send(records);
 };
 const create = [

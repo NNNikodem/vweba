@@ -82,6 +82,24 @@ const remove = async (req, res) => {
   await restaurants.delete(req.params.restId);
   res.send({});
 };
+const addLike = async (req, res) => {
+  const record = await restaurants.getOne(req.params.restId);
+  if (!record) {
+    return res.status(404).send({ message: "Restaurant not found!" });
+  }
+  recordLikes = record.likes++;
+  await restaurants.update(req.params.restId, { likes: recordLikes });
+  res.send({});
+};
+const removeLike = async (req, res) => {
+  const record = await restaurants.getOne(req.params.restId);
+  if (!record) {
+    return res.status(404).send({ message: "Restaurant not found!" });
+  }
+  recordLikes = record.likes--;
+  await restaurants.update(req.params.restId, { likes: recordLikes });
+  res.send({});
+};
 
 module.exports = {
   get,

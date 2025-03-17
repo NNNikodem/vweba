@@ -15,7 +15,6 @@ app.use(authMiddleware);
 
 app.use("/restiky", require("./src/routes/restaurant.route"));
 app.use("/public", require("./src/routes/public.route"));
-
 app.use((error, req, res, next) => {
   res.status(error.code || 500);
   res.send({ message: error.message || "An unknown error occured!" });

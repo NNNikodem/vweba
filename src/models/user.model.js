@@ -1,28 +1,24 @@
-const BaseRepository = require("../../repositories/repository");
 const crypto = require("crypto");
+const mongoose = require("mongoose");
+const { Schema } = mongoose;
 
-class UserRepository extends BaseRepository {
-  async create(attrs) {
-    const records = await this.getAll();
-    const salt = crypto.randomBytes(16).toString("hex");
-    const record = {
-      ...attrs,
-      salt,
-      password: crypto
-        .pbkdf2Sync(attrs.password, salt, 1000, 64, "sha512")
-        .toString("hex"),
-      id: this.randomId(),
-    };
-    records.push(record);
-    await this.writeAll(records);
-    return record;
-  }
-  checkPassword = (user, password) => {
-    const hash_pwd = crypto
-      .pbkdf2Sync(password, user.salt, 1000, 64, "sha512")
-      .toString("hex");
-    return user.password === hash_pwd;
-  };
-}
+const userSchema = new Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, lowercase: true, trim: true },
+  password: { type: String, required: true },
+  salt: { type: String, required: true },
+});
 
-module.exports = new UserRepository("./users.json");
+userSchema.methods.setPassword = function (password) {
+  this.salt = crypto.randomBytes(16).toString("hex");
+  this.password = crypto
+    .pbkdf2Sync(password, this.salt, 1000, 64, "sha512")
+    .toString("hex");
+};
+userSchema.methods.checkPassword = function (password) {
+  const hash_pwd = crypto
+    .pbkdf2Sync(password, this.salt, 1000, 64, "sha512")
+    .toString("hex");
+  return this.password === hash_pwd;
+};
+module.exports = mongoose.model("User", userSchema);

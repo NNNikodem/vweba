@@ -1,11 +1,16 @@
 const { body, validationResult, matchedData } = require("express-validator");
-const restaurants = require("../../repositories/restaurants");
+const restaurantModel = require("../models/restaurant.model");
 const HttpError = require("../utils/HttpError");
 const { checkValidation } = require("../utils/helpers");
+const typeModel = require("../models/type.model");
 
 const get = async (req, res) => {
-  const records = await restaurants.getAll();
+  const records = await restaurantModel.find();
+  res.send(records);
+};
+const getByUser = async (req, res) => {
   console.log(req.user);
+  const records = await restaurantModel.find({ userId: req.user.userId });
   res.send(records);
 };
 const create = [
@@ -14,12 +19,12 @@ const create = [
     .isEmpty()
     .isLength({ min: 5 })
     .withMessage("Name should have at least 5 cahracters."),
-  body("decription")
+  body("description")
     .not()
     .isEmpty()
     .isLength({ min: 10 })
     .withMessage("Description should have at least 10 cahracters."),
-  body("type").not().isEmpty().withMessage("Type should not be empty."),
+  body("typeId").not().isEmpty(),
   body("address.street")
     .not()
     .isEmpty()
@@ -36,9 +41,26 @@ const create = [
     .withMessage("State should not be empty."),
   async (req, res) => {
     checkValidation(validationResult(req));
-    const record = await restaurants.create(req.body);
-
-    res.status(201).send(record);
+    const { name, description, typeId, address } = req.body;
+    const typeObj = await typeModel.findById(typeId);
+    if (!typeObj) {
+      throw new HttpError("Type not found!", 404);
+    }
+    const record = new restaurantModel({
+      name,
+      description,
+      address,
+      type: typeObj.type,
+      typeId,
+      userId: req.user.userId,
+      userName: req.user.userName,
+    });
+    try {
+      await record.save();
+    } catch (error) {
+      throw new HttpError("Database error: " + error.message, 500);
+    }
+    res.status(201).send({ record: record._id });
   },
 ];
 const edit = [
@@ -61,48 +83,51 @@ const edit = [
   async (req, res) => {
     checkValidation(validationResult(req));
     const matched = matchedData(req, {
+      includeOptional: true,
       onlyValidData: true,
     });
+    const record = await restaurantModel.findById(req.params.restId);
+    if (!record) {
+      throw new HttpError("Restaurant not found!", 404);
+    }
+    for (const key in matched) {
+      if (matched[key] !== undefined) {
+        if (key === "address") {
+          for (const addressKey in matched[key]) {
+            if (matched[key][addressKey] !== undefined) {
+              record[key][addressKey] = matched[key][addressKey];
+            }
+            record.markModified("address");
+          }
+          continue;
+        }
+        record[key] = matched[key];
+      }
+    }
     try {
-      await restaurants.update(req.params.restId, matched);
+      await record.save();
     } catch (error) {
       return res
         .status(404)
         .send({ message: "Restaurant not found! " + error.message });
     }
-    res.send({});
+    res.status(201).send({ message: "Restaurant updated successfully" });
   },
 ];
 const remove = async (req, res) => {
-  const record = await restaurants.getOne(req.params.restId);
-  if (!record) {
-    //return res.status(404).send({message:"Restaurant not found!"});
-    throw new HttpError("Restaurant not found!", 404);
+  try {
+    await restaurantModel.findByIdAndDelete(req.params.restId);
+  } catch (error) {
+    return res
+      .status(404)
+      .send({ message: "Restaurant not found! " + error.message });
   }
-  await restaurants.delete(req.params.restId);
-  res.send({});
-};
-const addLike = async (req, res) => {
-  const record = await restaurants.getOne(req.params.restId);
-  if (!record) {
-    return res.status(404).send({ message: "Restaurant not found!" });
-  }
-  recordLikes = record.likes++;
-  await restaurants.update(req.params.restId, { likes: recordLikes });
-  res.send({});
-};
-const removeLike = async (req, res) => {
-  const record = await restaurants.getOne(req.params.restId);
-  if (!record) {
-    return res.status(404).send({ message: "Restaurant not found!" });
-  }
-  recordLikes = record.likes--;
-  await restaurants.update(req.params.restId, { likes: recordLikes });
-  res.send({});
+  res.status(201).send({ message: "Restaurant deleted successfully" });
 };
 
 module.exports = {
   get,
+  getByUser,
   create,
   edit,
   remove,

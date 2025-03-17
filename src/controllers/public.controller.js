@@ -32,14 +32,23 @@ const signUp = [
   async (req, res) => {
     checkValidation(validationResult(req));
     const { name, email, password, password_repeat } = req.body;
-    const existingUser = await userModel.getOneBy({ email });
+    const existingUser = await userModel.findOne({ email });
     if (existingUser) {
       throw new HttpError("Tento email sa uz pouziva.", 400);
     }
     if (password !== password_repeat) {
       throw new HttpError("Hesla sa nezhoduju!", 400);
     }
-    const record = await userModel.create({ name, email, password });
+    const record = new userModel({
+      name,
+      email,
+    });
+    record.setPassword(password);
+    try {
+      await record.save();
+    } catch (error) {
+      throw new HttpError(`Database error: ${error.message}`, 500);
+    }
     res.status(201).send({ email: record.email });
   },
 ];
@@ -49,16 +58,16 @@ const signIn = [
   async (req, res) => {
     checkValidation(validationResult(req));
     const { email, password } = req.body;
-    const existingUser = await userModel.getOneBy({ email });
+    const existingUser = await userModel.findOne({ email: email });
     if (!existingUser) {
       throw new HttpError("Zle prihlasovacie udaje!", 400);
     }
-    if (!userModel.checkPassword(existingUser, password)) {
+    if (!existingUser.checkPassword(password)) {
       throw new HttpError("Zle prihlasovacie udaje!", 400);
     }
     const token = jwt.sign(
       {
-        userId: existingUser.id,
+        userId: existingUser._id,
         userName: existingUser.name,
       },
       process.env.API_KEY
